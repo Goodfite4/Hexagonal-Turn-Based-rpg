@@ -1,0 +1,10 @@
+    {
+      "compilerOptions": {
+        "target": "ES2015",
+        "lib": ["ES2015", "DOM"]
+      },
+      "exclude": [
+        "node_modules",
+        "C:/Users/Fries/VSCODE_Projects/RPG-Game/index.js"
+      ]
+    }
