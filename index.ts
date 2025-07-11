@@ -35,13 +35,15 @@ interface Character {
     int: number;
     path: Path2D;
     currentPath?: Hex[];
+    actionPoints: number;
+    bonusActionPoints: number;
 }
 
 const tester: Character = {
-    x: 125,
-    y: 232.84,
-    xCor:2,
-    yCor:3,
+    x: null,
+    y: null,
+    xCor:null,
+    yCor:null,
     hp: 100,
     mana: 100,
     movementSpeed: 10,
@@ -49,7 +51,51 @@ const tester: Character = {
     dex: 20,
     int: 20,
     path: null,
+    actionPoints: 1,
+    bonusActionPoints: 1,
 };
+
+function createCharacter(overrides: Partial<Character> = {}): Character {
+    return {
+        x: null,
+        y: null,
+        xCor: null,
+        yCor: null,
+        hp: 100,
+        mana: 100,
+        movementSpeed: 5,
+        str: 20,
+        dex: 20,
+        int: 20,
+        path: null,
+        actionPoints: 1,
+        bonusActionPoints: 1, 
+        ...overrides
+    };
+}
+
+const team1: Character[] = [
+    createCharacter({xCor: 13, yCor: 1, x: hexToPixel(13, 1).x, y: hexToPixel(13, 1).y}),
+    createCharacter({xCor: 14, yCor: 2, x: hexToPixel(14, 2).x, y: hexToPixel(14, 2).y}),
+    createCharacter({xCor: 14, yCor: 1, x: hexToPixel(14, 1).x, y: hexToPixel(14, 1).y})
+];
+const team2: Character[] = [
+    createCharacter({xCor: 2, yCor: 9, x: hexToPixel(2, 9).x, y: hexToPixel(2, 9).y}),
+    createCharacter({xCor: 1, yCor: 9, x: hexToPixel(1, 9).x, y: hexToPixel(1, 9).y}),
+    createCharacter({xCor: 1, yCor: 8, x: hexToPixel(1, 8).x, y: hexToPixel(1, 8).y})
+];
+
+const turn_order: Character[] = [...team1, ...team2].sort((a, b) => a.dex - b.dex);
+
+let currentTurnIndex = 0;
+let isCharacterMoving = false;
+
+function checkTurnOrder(character: Character) {
+    character.movementSpeed = 5;
+    isCharacterMoving = false;
+    currentTurnIndex = (currentTurnIndex + 1) % turn_order.length;
+    console.log("turn_order:", turn_order);
+}
 
 interface Hex {
     terrain: "normal"|"muddy"|"wet"|"hole"|"blocked"|"burning";
@@ -61,8 +107,6 @@ interface Hex {
     yCor: number;
     img: HTMLImageElement;
 }
-
-
 
 const hexes: Hex[] = [];
 const hexMap = new Map<string, Hex>();
@@ -95,8 +139,9 @@ function render() {
     for (const hex of hexes) {
         ctx.drawImage(hex.img, hex.x - hex.img.width / 2, hex.y - hex.img.height / 2);
     }
-
-    renderChar(tester); 
+    for (const char of turn_order) {
+        renderChar(char); 
+    }
 
     ctx.restore();
 
@@ -112,7 +157,9 @@ function renderChar(character:Character) {
     character.path = path;
 }
 
-const structureList: string[] = ["Oasis", "the wall", "muddy", "ravine"];
+// const structureList: string[] = ["Oasis", "the wall", "muddy", "ravine"];
+
+const structureList: string[] = ["normal"];
 
 const reservedHexes = new Map<string, Hex["terrain"]>();
 
@@ -311,12 +358,30 @@ function makeTerrain(row, col) {
 } 
 
 //pathfinding
+
+
+function getCurrentHex(character: Character): Hex | undefined {
+    return hexMap.get(`${character.xCor},${character.yCor}`);
+}
+
 function moveChar(character: Character) {
-    if (!character.currentPath || character.currentPath.length === 0) return;
-
+    if (character.movementSpeed <= 0) {
+        checkTurnOrder(character);
+        return;
+    }
+    const currentHexagon = getCurrentHex(character);
+    character.movementSpeed -= currentHexagon.movementCost;
+    // console.log(character.movementSpeed);
+    isCharacterMoving = true;
+    if (!character.currentPath || character.currentPath.length === 0) {
+        isCharacterMoving = false;
+        return;
+    }
     const nextHex = character.currentPath.shift();
-    if (!nextHex) return;
-
+    if (!nextHex) {
+        isCharacterMoving = false;
+        return;
+    }
     character.xCor = nextHex.xCor;
     character.yCor = nextHex.yCor;
     character.x = nextHex.x;
@@ -331,6 +396,7 @@ function moveChar(character: Character) {
     if (character.currentPath.length > 0) {
         setTimeout(() => moveChar(character), 150);
     }
+
 }
 
 function setPathTo(character: Character, targetHex: Hex) {
@@ -343,6 +409,21 @@ function setPathTo(character: Character, targetHex: Hex) {
         moveChar(character);
     }
 }
+
+//get neighbors of a hex helper
+function getNeighbors(hex: Hex): Hex[] {
+    const even = hex.xCor % 2 === 0;
+    const deltas = even
+        ? [[+1,  0], [0, -1], [-1, -1], [-1, 0], [-1, +1], [0, +1]]
+        : [[+1,  0], [0, -1], [-1, 0], [-1, +1], [0, +1], [+1, +1]];
+
+    return deltas
+        .map(([dx, dy]) =>
+            hexMap.get(`${hex.xCor + dx},${hex.yCor + dy}`)
+        )
+        .filter((h): h is Hex => !!h && h.movementCost !== Infinity);
+}
+
 
 function findPath(start: Hex, goal: Hex): Hex[] {
     interface Node {
@@ -373,20 +454,6 @@ function findPath(start: Hex, goal: Hex): Hex[] {
     const [bx, by, bz] = toCube(b.xCor, b.yCor);
     return Math.max(Math.abs(ax - bx), Math.abs(ay - by), Math.abs(az - bz));
 }
-
-    function getNeighbors(hex: Hex): Hex[] {
-        const even = hex.xCor % 2 === 0;
-        const deltas = even
-            ? [[+1,  0], [0, -1], [-1, -1], [-1, 0], [-1, +1], [0, +1]]
-            : [[+1,  0], [0, -1], [-1, 0], [-1, +1], [0, +1], [+1, +1]];
-
-        return deltas
-            .map(([dx, dy]) =>
-                hexMap.get(`${hex.xCor + dx},${hex.yCor + dy}`)
-            )
-            .filter((h): h is Hex => !!h && h.movementCost !== Infinity);
-    }
-
     const startNode: Node = {
         hex: start,
         g: 0,
@@ -444,6 +511,28 @@ function findPath(start: Hex, goal: Hex): Hex[] {
     return [];
 }
 
+//this code is so messy man just start coding the actionPoints logic here
+function checkActionPoints(character: Character) {
+    if (character.actionPoints <= 0 && character.bonusActionPoints <= 0) {  
+        checkTurnOrder(character);
+        return
+    }
+    return (character.actionPoints, character.bonusActionPoints); 
+}
+
+function getNeighboringCharacters(hex: Hex, characters: Character[]): Character[] {
+    const neighbors = getNeighbors(hex);
+    return characters.filter(char =>
+        neighbors.some(n => n.xCor === char.xCor && n.yCor === char.yCor)
+    );
+}
+// OI I WANT YOU TO ADD AN ATTACKING FUNCTION ON YOUR NEXT THING. 
+// It checks if the character has enough action / bonus action to do anything,
+// and the way you attack is you take the range of the weapon (e.g meele would be 1 hex away)
+// and then if the character you want to attack is in that range, you can attack them.
+// Create a new interface called weapon that has the following properties:
+// name, range, damage
+
 window.onload = async () => {
     initCanvas();
 
@@ -458,12 +547,13 @@ window.onload = async () => {
 
         for (const hex of hexes) {
             if (ctx.isPointInPath(hex.path, mouseX, mouseY)) {
-                setPathTo(tester, hex);
-                console.log("clicked hex", hex.xCor, hex.yCor, hex, hex);
+                setPathTo(turn_order[currentTurnIndex], hex);
+                //console.log("clicked hex", hex.xCor, hex.yCor, hex, hex);
                 return;
             }
         }
     });
+
     let isDragging = false;
     let lastMouseX = 0;
     let lastMouseY = 0;

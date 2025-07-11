@@ -28,10 +28,10 @@ hexImages.hole.src = "Images/Terrains/hole.png";
 hexImages.blocked.src = "Images/Terrains/blocked.png";
 hexImages.burning.src = "Images/Terrains/burning.png";
 const tester = {
-    x: 125,
-    y: 232.84,
-    xCor: 2,
-    yCor: 3,
+    x: null,
+    y: null,
+    xCor: null,
+    yCor: null,
     hp: 100,
     mana: 100,
     movementSpeed: 10,
@@ -39,7 +39,31 @@ const tester = {
     dex: 20,
     int: 20,
     path: null,
+    actionPoints: 1,
+    bonusActionPoints: 1,
 };
+function createCharacter(overrides = {}) {
+    return Object.assign({ x: null, y: null, xCor: null, yCor: null, hp: 100, mana: 100, movementSpeed: 5, str: 20, dex: 20, int: 20, path: null, actionPoints: 1, bonusActionPoints: 1 }, overrides);
+}
+const team1 = [
+    createCharacter({ xCor: 13, yCor: 1, x: hexToPixel(13, 1).x, y: hexToPixel(13, 1).y }),
+    createCharacter({ xCor: 14, yCor: 2, x: hexToPixel(14, 2).x, y: hexToPixel(14, 2).y }),
+    createCharacter({ xCor: 14, yCor: 1, x: hexToPixel(14, 1).x, y: hexToPixel(14, 1).y })
+];
+const team2 = [
+    createCharacter({ xCor: 2, yCor: 9, x: hexToPixel(2, 9).x, y: hexToPixel(2, 9).y }),
+    createCharacter({ xCor: 1, yCor: 9, x: hexToPixel(1, 9).x, y: hexToPixel(1, 9).y }),
+    createCharacter({ xCor: 1, yCor: 8, x: hexToPixel(1, 8).x, y: hexToPixel(1, 8).y })
+];
+const turn_order = [...team1, ...team2].sort((a, b) => a.dex - b.dex);
+let currentTurnIndex = 0;
+let isCharacterMoving = false;
+function checkTurnOrder(character) {
+    character.movementSpeed = 5;
+    isCharacterMoving = false;
+    currentTurnIndex = (currentTurnIndex + 1) % turn_order.length;
+    console.log("turn_order:", turn_order);
+}
 const hexes = [];
 const hexMap = new Map();
 let canvas;
@@ -65,7 +89,9 @@ function render() {
     for (const hex of hexes) {
         ctx.drawImage(hex.img, hex.x - hex.img.width / 2, hex.y - hex.img.height / 2);
     }
-    renderChar(tester);
+    for (const char of turn_order) {
+        renderChar(char);
+    }
     ctx.restore();
 }
 function renderChar(character) {
@@ -77,7 +103,8 @@ function renderChar(character) {
     ctx.stroke(path);
     character.path = path;
 }
-const structureList = ["Oasis", "the wall", "muddy", "ravine"];
+// const structureList: string[] = ["Oasis", "the wall", "muddy", "ravine"];
+const structureList = ["normal"];
 const reservedHexes = new Map();
 let key;
 function renderHex(x, y, size, terrain, xCor, yCor) {
@@ -260,12 +287,27 @@ function makeTerrain(row, col) {
         return "normal";
 }
 //pathfinding
+function getCurrentHex(character) {
+    return hexMap.get(`${character.xCor},${character.yCor}`);
+}
 function moveChar(character) {
-    if (!character.currentPath || character.currentPath.length === 0)
+    if (character.movementSpeed <= 0) {
+        checkTurnOrder(character);
         return;
+    }
+    const currentHexagon = getCurrentHex(character);
+    character.movementSpeed -= currentHexagon.movementCost;
+    // console.log(character.movementSpeed);
+    isCharacterMoving = true;
+    if (!character.currentPath || character.currentPath.length === 0) {
+        isCharacterMoving = false;
+        return;
+    }
     const nextHex = character.currentPath.shift();
-    if (!nextHex)
+    if (!nextHex) {
+        isCharacterMoving = false;
         return;
+    }
     character.xCor = nextHex.xCor;
     character.yCor = nextHex.yCor;
     character.x = nextHex.x;
@@ -283,21 +325,20 @@ function setPathTo(character, targetHex) {
     if (!startHex)
         return;
     const path = findPath(startHex, targetHex);
-    if (path.length > 1) {
-        // Movement speed calc
-        let totalCost = 0;
-        let maxIndex = 0;
-        for (let i = 1; i < path.length; i++) {
-            totalCost += path[i].movementCost;
-            if (totalCost > character.movementSpeed) {
-                break;
-            }
-            maxIndex = i;
-        }
-        // stop if out of MS
-        character.currentPath = path.slice(1, maxIndex + 1);
+    if (path.length > 0) {
+        character.currentPath = path.slice(1);
         moveChar(character);
     }
+}
+// Check neighbors for hexagons and characters.
+function getNeighbors(hex) {
+    const even = hex.xCor % 2 === 0;
+    const deltas = even
+        ? [[+1, 0], [0, -1], [-1, -1], [-1, 0], [-1, +1], [0, +1]]
+        : [[+1, 0], [0, -1], [-1, 0], [-1, +1], [0, +1], [+1, +1]];
+    return deltas
+        .map(([dx, dy]) => hexMap.get(`${hex.xCor + dx},${hex.yCor + dy}`))
+        .filter((h) => !!h && h.movementCost !== Infinity);
 }
 function findPath(start, goal) {
     const openSet = [];
@@ -315,15 +356,6 @@ function findPath(start, goal) {
         const [ax, ay, az] = toCube(a.xCor, a.yCor);
         const [bx, by, bz] = toCube(b.xCor, b.yCor);
         return Math.max(Math.abs(ax - bx), Math.abs(ay - by), Math.abs(az - bz));
-    }
-    function getNeighbors(hex) {
-        const even = hex.xCor % 2 === 0;
-        const deltas = even
-            ? [[+1, 0], [0, -1], [-1, -1], [-1, 0], [-1, +1], [0, +1]]
-            : [[+1, 0], [0, -1], [-1, 0], [-1, +1], [0, +1], [+1, +1]];
-        return deltas
-            .map(([dx, dy]) => hexMap.get(`${hex.xCor + dx},${hex.yCor + dy}`))
-            .filter((h) => !!h && h.movementCost !== Infinity);
     }
     const startNode = {
         hex: start,
@@ -375,6 +407,14 @@ function findPath(start, goal) {
     // No path found
     return [];
 }
+//this code is so messy man just start coding the actionPoints logic here
+function checkActionPoints(character) {
+    if (character.actionPoints <= 0 && character.bonusActionPoints <= 0) {
+        checkTurnOrder(character);
+        return;
+    }
+    return (character.actionPoints, character.bonusActionPoints);
+}
 window.onload = () => __awaiter(this, void 0, void 0, function* () {
     initCanvas();
     genHex(10, 15, 40);
@@ -385,8 +425,8 @@ window.onload = () => __awaiter(this, void 0, void 0, function* () {
         const mouseY = (i.clientY - rect.top) / camera.zoom + camera.y;
         for (const hex of hexes) {
             if (ctx.isPointInPath(hex.path, mouseX, mouseY)) {
-                setPathTo(tester, hex);
-                console.log("clicked hex", hex.xCor, hex.yCor, hex, hex);
+                setPathTo(turn_order[currentTurnIndex], hex);
+                //console.log("clicked hex", hex.xCor, hex.yCor, hex, hex);
                 return;
             }
         }
