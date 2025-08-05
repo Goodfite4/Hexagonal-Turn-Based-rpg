@@ -1,10 +1,11 @@
-//tsc --project ./tsconfig.json to run the code
-
 const camera = {
     x: 0,
     y: 0,
     zoom: 1,
 }
+
+const worldWidth = 3000;
+const worldHeight = 2000;
 
 const hexImages: Record<Hex["terrain"], HTMLImageElement> = {
     normal: new Image(),
@@ -22,6 +23,36 @@ hexImages.hole.src = "Images/Terrains/hole.png"
 hexImages.blocked.src = "Images/Terrains/blocked.png"
 hexImages.burning.src = "Images/Terrains/burning.png"
 
+interface Classes {
+    name: string;
+    range: number;
+    baseDmg: number;
+    portrait: string;
+}
+
+const Warrior: Classes = {
+    name: "Warrior",
+    range: 1,
+    baseDmg: 20,
+    portrait: "Images/Classes/Warrior/Warrior.png",
+}
+
+const Ranger: Classes = {
+    name: "Range",
+    range: 5,
+    baseDmg: 15,
+    portrait: "Images/Classes/Range/Range.png",
+}
+
+const Mager: Classes = {
+    name: "Mage",
+    range: 1,
+    baseDmg: 5,
+    portrait: "Images/Classes/Mage/Mage.png",
+}
+
+
+
 interface Character {
     x: number;
     y: number;
@@ -37,6 +68,7 @@ interface Character {
     currentPath?: Hex[];
     actionPoints: number;
     bonusActionPoints: number;
+    class: Classes;
 }
 
 const tester: Character = {
@@ -53,6 +85,7 @@ const tester: Character = {
     path: null,
     actionPoints: 1,
     bonusActionPoints: 1,
+    class: Warrior,
 };
 
 function createCharacter(overrides: Partial<Character> = {}): Character {
@@ -70,31 +103,99 @@ function createCharacter(overrides: Partial<Character> = {}): Character {
         path: null,
         actionPoints: 1,
         bonusActionPoints: 1, 
+        class: null,
         ...overrides
     };
 }
 
+function updatePortraits (list: Character[]) {
+    const container = document.getElementById("turn-order-ui")!;
+    container.innerHTML = "";
+
+    list.forEach((char, i) => {
+        const img = document.createElement("img");
+        img.src = char.class.portrait;
+        img.alt = char.class.name;
+        img.style.width = "45px";
+        img.style.margin = "0 5px";
+        container.appendChild(img);
+    });
+}
+
+function updateBanner(list: Character[]) {
+    const char = list[0];
+    const char_portrait = document.getElementById("char-portrait") as HTMLImageElement
+    char_portrait.src = char.class.portrait;
+    char_portrait.onclick = () => {
+        addChatLine(`${char.class.name} has ${char.hp} hp`)
+    }
+    for (let i = 1; i <= 4; i++) {
+        const abilityEl = document.getElementById(`ability-${i}`) as HTMLImageElement;
+        abilityEl.src = `Images/Classes/${char.class.name}/${char.class.name + i}.png`;
+        abilityEl.onclick = () => {
+            addChatLine(`${char.class.name}`);
+        };
+    }
+
+    const msIcon = document.getElementById("movement-speed-icon") as HTMLImageElement;
+    msIcon.onclick = () => {
+        addChatLine(`${char.class.name} has ${char.movementSpeed} movement speed.`);
+    };
+}
+
+function addChatLine(message: string) {
+    const chatInfo = document.getElementById("chat-info");
+    if (!chatInfo) return;
+
+    const line = document.createElement("div");
+    line.textContent = message;
+    chatInfo.appendChild(line);
+
+    chatInfo.scrollTop = chatInfo.scrollHeight;
+}
+
 const team1: Character[] = [
-    createCharacter({xCor: 13, yCor: 1, x: hexToPixel(13, 1).x, y: hexToPixel(13, 1).y}),
-    createCharacter({xCor: 14, yCor: 2, x: hexToPixel(14, 2).x, y: hexToPixel(14, 2).y}),
-    createCharacter({xCor: 14, yCor: 1, x: hexToPixel(14, 1).x, y: hexToPixel(14, 1).y})
+    createCharacter({xCor: 13, yCor: 1, x: hexToPixel(13, 1).x, y: hexToPixel(13, 1).y, class: Warrior}),
+    createCharacter({xCor: 14, yCor: 2, x: hexToPixel(14, 2).x, y: hexToPixel(14, 2).y, class: Mager}),
+    createCharacter({xCor: 14, yCor: 1, x: hexToPixel(14, 1).x, y: hexToPixel(14, 1).y, class: Ranger})
 ];
 const team2: Character[] = [
-    createCharacter({xCor: 2, yCor: 9, x: hexToPixel(2, 9).x, y: hexToPixel(2, 9).y}),
-    createCharacter({xCor: 1, yCor: 9, x: hexToPixel(1, 9).x, y: hexToPixel(1, 9).y}),
-    createCharacter({xCor: 1, yCor: 8, x: hexToPixel(1, 8).x, y: hexToPixel(1, 8).y})
+    createCharacter({xCor: 2, yCor: 9, x: hexToPixel(2, 9).x, y: hexToPixel(2, 9).y, class: Warrior}),
+    createCharacter({xCor: 1, yCor: 9, x: hexToPixel(1, 9).x, y: hexToPixel(1, 9).y, class: Mager}),
+    createCharacter({xCor: 1, yCor: 8, x: hexToPixel(1, 8).x, y: hexToPixel(1, 8).y, class: Ranger})
 ];
 
-const turn_order: Character[] = [...team1, ...team2].sort((a, b) => a.dex - b.dex);
+let turn_order: Character[] = [...team1, ...team2].sort((a, b) => b.dex - a.dex);
 
-let currentTurnIndex = 0;
 let isCharacterMoving = false;
 
 function checkTurnOrder(character: Character) {
     character.movementSpeed = 5;
     isCharacterMoving = false;
-    currentTurnIndex = (currentTurnIndex + 1) % turn_order.length;
+    const put_turn_last = turn_order.shift();
+    if (put_turn_last !== undefined) turn_order.push(put_turn_last);
+        
     console.log("turn_order:", turn_order);
+}
+
+//Chatting Logic
+
+function sendMessage() {
+    const input = document.getElementById("chat-box");
+    const chatInfo = document.getElementById("chat-info");
+
+    const text = input.innerText.trim();
+
+    if (text === "") return;
+
+    const entry = document.createElement("div");
+    entry.textContent = `> ${text}`;
+    chatInfo.appendChild(entry);
+    chatInfo.scrollTop = chatInfo.scrollHeight;
+
+
+    input.innerText = "";
+
 }
 
 interface Hex {
@@ -108,6 +209,14 @@ interface Hex {
     img: HTMLImageElement;
 }
 
+function logToChat(text) {
+  const chatInfo = document.getElementById("chat-info");
+  const entry = document.createElement("div");
+  entry.textContent = text;
+  chatInfo.appendChild(entry);
+  chatInfo.scrollTop = chatInfo.scrollHeight;
+}
+
 const hexes: Hex[] = [];
 const hexMap = new Map<string, Hex>();
 
@@ -115,30 +224,39 @@ let canvas: HTMLCanvasElement;
 let ctx: CanvasRenderingContext2D;
 
 // calc hexToPixel ratio
-function hexToPixel(xCor: number, yCor: number, size = 40): { x: number, y: number } {
+function hexToPixel(xCor: number, yCor: number, size = 40, ): { x: number, y: number } {
     const vertSpacing = Math.sqrt(3) * size;
     const horizSpacing = 0.75 * (2 * size);
-    const x = xCor * horizSpacing + 25;
-    const y = yCor * vertSpacing + (xCor % 2) * (vertSpacing / 2) + 25;
+    const x = xCor * horizSpacing + (window.innerWidth / 3.8);
+    const y = yCor * vertSpacing + (xCor % 2) * (vertSpacing / 2) + 95;
     return { x, y };
 }
-
 
 function initCanvas() {
     canvas = document.getElementById("canvas") as HTMLCanvasElement;
     ctx = canvas.getContext("2d")!;
     
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight; }
+    // canvas.width = 1200;
+    // canvas.height = 700; 
+    }
 
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
-    ctx.setTransform(camera.zoom, 0, 0, camera.zoom, -camera.x, -camera.y);
+    ctx.setTransform(camera.zoom, 0, 0, camera.zoom, -camera.x * camera.zoom, -camera.y * camera.zoom);
+
+    ctx.fillStyle = "rgb(171 215 235)";
+    ctx.fillRect(0, 0, worldWidth, worldHeight);
+
+    updatePortraits(turn_order);
+    updateBanner(turn_order);
 
     for (const hex of hexes) {
-        ctx.drawImage(hex.img, hex.x - hex.img.width / 2, hex.y - hex.img.height / 2);
+        const screenX = hex.x - hex.img.width / 2;
+        const screenY = hex.y - hex.img.height / 2;
+        ctx.drawImage(hex.img, screenX, screenY);
     }
+
     for (const char of turn_order) {
         renderChar(char); 
     }
@@ -150,9 +268,11 @@ function render() {
 function renderChar(character:Character) {
     const path = new Path2D();
     path.arc(character.x, character.y, 10, 0, 2* Math.PI)
-    ctx.fillStyle = "#ff0";
+    if (character.class == Mager) ctx.fillStyle = "#0000FF";
+    if (character.class == Ranger) ctx.fillStyle = "#00ff00";
+    if (character.class == Warrior) ctx.fillStyle = "#FF0000";
     ctx.fill(path);
-    ctx.strokeStyle= "#000";
+    ctx.strokeStyle= "#000000";
     ctx.stroke(path);
     character.path = path;
 }
@@ -410,18 +530,35 @@ function setPathTo(character: Character, targetHex: Hex) {
     }
 }
 
+function isOccupied(hex: Hex, characters: Character[]): boolean {
+    return characters.some(c => c.xCor === hex.xCor && c.yCor === hex.yCor);
+}
+
+const filtered = hexes.filter(
+    (h): h is Hex =>
+        !!h &&
+        h.movementCost !== Infinity &&
+        !isOccupied(h, turn_order)
+);
+
 //get neighbors of a hex helper
 function getNeighbors(hex: Hex): Hex[] {
     const even = hex.xCor % 2 === 0;
     const deltas = even
-        ? [[+1,  0], [0, -1], [-1, -1], [-1, 0], [-1, +1], [0, +1]]
-        : [[+1,  0], [0, -1], [-1, 0], [-1, +1], [0, +1], [+1, +1]];
+        ? [[+1, -1], [0, -1], [-1, -1], [-1, 0], [0, +1], [+1, 0]]
+        : [[+1, 0], [0, -1], [-1, 0], [-1, +1], [0, +1], [+1, +1]];
+
 
     return deltas
         .map(([dx, dy]) =>
             hexMap.get(`${hex.xCor + dx},${hex.yCor + dy}`)
         )
-        .filter((h): h is Hex => !!h && h.movementCost !== Infinity);
+        .filter(
+            (h): h is Hex =>
+                !!h &&
+                h.movementCost !== Infinity &&
+                !isOccupied(h, [...team1, ...team2])
+        );
 }
 
 
@@ -535,11 +672,10 @@ function getNeighboringCharacters(hex: Hex, characters: Character[]): Character[
 
 window.onload = async () => {
     initCanvas();
-
     genHex(10, 15, 40);
 
     render();
-    
+
     canvas.addEventListener("click", (i) => {
         const rect = canvas.getBoundingClientRect();
         const mouseX = (i.clientX - rect.left) / camera.zoom + camera.x;
@@ -547,8 +683,8 @@ window.onload = async () => {
 
         for (const hex of hexes) {
             if (ctx.isPointInPath(hex.path, mouseX, mouseY)) {
-                setPathTo(turn_order[currentTurnIndex], hex);
-                //console.log("clicked hex", hex.xCor, hex.yCor, hex, hex);
+                setPathTo(turn_order[0], hex);
+                // console.log("clicked hex", hex.xCor, hex.yCor, hex, hex);
                 return;
             }
         }
@@ -593,8 +729,8 @@ window.onload = async () => {
 
         camera.zoom *= zoomFactor;
 
-        // if (camera.zoom > 5) camera.zoom = 5;
-        // if (camera.zoom < 0.8) camera.zoom = 1;
+        if (camera.zoom > 5) camera.zoom = 5;
+        if (camera.zoom < 0.5) camera.zoom = 0.5;
 
         camera.x = mouseX - (m.clientX - rect.left) / camera.zoom;
         camera.y = mouseY - (m.clientY - rect.top) / camera.zoom;

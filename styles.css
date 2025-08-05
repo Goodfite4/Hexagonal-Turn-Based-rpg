@@ -1,20 +1,109 @@
-#canvas {
-  border: 1px solid black;
+body {
+  background-color: rgb(171, 215, 235);
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
 }
 
-/* #hex-grid {
+#Game {
   display: flex;
-  flex-wrap: wrap;
-  width: calc(100%); 
-  margin: 0 -12.5px;
-  padding: 50px 0;
+  flex-direction: column;
+  align-items: center;
+  
 }
 
-.hex {
-  position: relative;
-  width: 115px;
-  height: 115px;
-  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
-  background: gray;
+#turn-order-ui {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+  gap: 10px;
+}
 
-} */
+#full-window {
+  display: flex;
+  flex-direction: row;
+  width: fit-content;
+  border: 2px solid black;
+}
+
+#canvas {
+  border: 2px solid black;
+}
+
+#sidebar {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+#chat-info {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid #999;
+  padding: 5px;
+  background-color: #f5f5f5;
+  max-height: 860px;
+}
+
+#chat-input {
+  display: flex;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+#chat-box {
+  flex: 1;
+  padding: 5px;
+}
+
+#action-banner-ui {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 80px;
+  display: flex;
+  align-items: center;
+}
+
+#action-banner-ui img {
+  height: 64px;
+  width: 64px;
+  object-fit: contain;
+  cursor: pointer;
+}
+
+#ability-banner { 
+  display: flex;
+  align-items: center;
+  justify-content: start;
+  gap: 20px;
+
+  width: 100%;
+  max-width: 1600px;
+  height: 90px;
+
+  border: 2px solid #094d41;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  background-color: rgba(255, 255, 255, 0.0);
+
+  padding: 10px 20px;
+  box-sizing: border-box;
+  margin-top: -80px;
+
+}
+
+#action-banner-ui .ap-icon {
+  width: 36px;
+  height: 36px;
+}
+
+#movement-speed-icon {
+  width: 32px;
+  height: 32px;
+}

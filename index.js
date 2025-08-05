@@ -1,4 +1,3 @@
-//tsc --project ./tsconfig.json to run the code
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -13,6 +12,8 @@ const camera = {
     y: 0,
     zoom: 1,
 };
+const worldWidth = 3000;
+const worldHeight = 2000;
 const hexImages = {
     normal: new Image(),
     muddy: new Image(),
@@ -27,6 +28,24 @@ hexImages.wet.src = "Images/Terrains/wet.png";
 hexImages.hole.src = "Images/Terrains/hole.png";
 hexImages.blocked.src = "Images/Terrains/blocked.png";
 hexImages.burning.src = "Images/Terrains/burning.png";
+const Warrior = {
+    name: "Warrior",
+    range: 1,
+    baseDmg: 20,
+    portrait: "Images/Classes/Warrior/Warrior.png",
+};
+const Ranger = {
+    name: "Range",
+    range: 5,
+    baseDmg: 15,
+    portrait: "Images/Classes/Range/Range.png",
+};
+const Mager = {
+    name: "Mage",
+    range: 1,
+    baseDmg: 5,
+    portrait: "Images/Classes/Mage/Mage.png",
+};
 const tester = {
     x: null,
     y: null,
@@ -41,28 +60,90 @@ const tester = {
     path: null,
     actionPoints: 1,
     bonusActionPoints: 1,
+    class: Warrior,
 };
 function createCharacter(overrides = {}) {
-    return Object.assign({ x: null, y: null, xCor: null, yCor: null, hp: 100, mana: 100, movementSpeed: 5, str: 20, dex: 20, int: 20, path: null, actionPoints: 1, bonusActionPoints: 1 }, overrides);
+    return Object.assign({ x: null, y: null, xCor: null, yCor: null, hp: 100, mana: 100, movementSpeed: 5, str: 20, dex: 20, int: 20, path: null, actionPoints: 1, bonusActionPoints: 1, class: null }, overrides);
+}
+function updatePortraits(list) {
+    const container = document.getElementById("turn-order-ui");
+    container.innerHTML = "";
+    list.forEach((char, i) => {
+        const img = document.createElement("img");
+        img.src = char.class.portrait;
+        img.alt = char.class.name;
+        img.style.width = "45px";
+        img.style.margin = "0 5px";
+        container.appendChild(img);
+    });
+}
+function updateBanner(list) {
+    const char = list[0];
+    const char_portrait = document.getElementById("char-portrait");
+    char_portrait.src = char.class.portrait;
+    char_portrait.onclick = () => {
+        addChatLine(`${char.class.name} has ${char.hp} hp`);
+    };
+    for (let i = 1; i <= 4; i++) {
+        const abilityEl = document.getElementById(`ability-${i}`);
+        abilityEl.src = `Images/Classes/${char.class.name}/${char.class.name + i}.png`;
+        abilityEl.onclick = () => {
+            addChatLine(`${char.class.name}`);
+        };
+    }
+    const msIcon = document.getElementById("movement-speed-icon");
+    msIcon.onclick = () => {
+        addChatLine(`${char.class.name} has ${char.movementSpeed} movement speed.`);
+    };
+}
+function addChatLine(message) {
+    const chatInfo = document.getElementById("chat-info");
+    if (!chatInfo)
+        return;
+    const line = document.createElement("div");
+    line.textContent = message;
+    chatInfo.appendChild(line);
+    chatInfo.scrollTop = chatInfo.scrollHeight;
 }
 const team1 = [
-    createCharacter({ xCor: 13, yCor: 1, x: hexToPixel(13, 1).x, y: hexToPixel(13, 1).y }),
-    createCharacter({ xCor: 14, yCor: 2, x: hexToPixel(14, 2).x, y: hexToPixel(14, 2).y }),
-    createCharacter({ xCor: 14, yCor: 1, x: hexToPixel(14, 1).x, y: hexToPixel(14, 1).y })
+    createCharacter({ xCor: 13, yCor: 1, x: hexToPixel(13, 1).x, y: hexToPixel(13, 1).y, class: Warrior }),
+    createCharacter({ xCor: 14, yCor: 2, x: hexToPixel(14, 2).x, y: hexToPixel(14, 2).y, class: Mager }),
+    createCharacter({ xCor: 14, yCor: 1, x: hexToPixel(14, 1).x, y: hexToPixel(14, 1).y, class: Ranger })
 ];
 const team2 = [
-    createCharacter({ xCor: 2, yCor: 9, x: hexToPixel(2, 9).x, y: hexToPixel(2, 9).y }),
-    createCharacter({ xCor: 1, yCor: 9, x: hexToPixel(1, 9).x, y: hexToPixel(1, 9).y }),
-    createCharacter({ xCor: 1, yCor: 8, x: hexToPixel(1, 8).x, y: hexToPixel(1, 8).y })
+    createCharacter({ xCor: 2, yCor: 9, x: hexToPixel(2, 9).x, y: hexToPixel(2, 9).y, class: Warrior }),
+    createCharacter({ xCor: 1, yCor: 9, x: hexToPixel(1, 9).x, y: hexToPixel(1, 9).y, class: Mager }),
+    createCharacter({ xCor: 1, yCor: 8, x: hexToPixel(1, 8).x, y: hexToPixel(1, 8).y, class: Ranger })
 ];
-const turn_order = [...team1, ...team2].sort((a, b) => a.dex - b.dex);
-let currentTurnIndex = 0;
+let turn_order = [...team1, ...team2].sort((a, b) => b.dex - a.dex);
 let isCharacterMoving = false;
 function checkTurnOrder(character) {
     character.movementSpeed = 5;
     isCharacterMoving = false;
-    currentTurnIndex = (currentTurnIndex + 1) % turn_order.length;
+    const put_turn_last = turn_order.shift();
+    if (put_turn_last !== undefined)
+        turn_order.push(put_turn_last);
     console.log("turn_order:", turn_order);
+}
+//Chatting Logic
+function sendMessage() {
+    const input = document.getElementById("chat-box");
+    const chatInfo = document.getElementById("chat-info");
+    const text = input.innerText.trim();
+    if (text === "")
+        return;
+    const entry = document.createElement("div");
+    entry.textContent = `> ${text}`;
+    chatInfo.appendChild(entry);
+    chatInfo.scrollTop = chatInfo.scrollHeight;
+    input.innerText = "";
+}
+function logToChat(text) {
+    const chatInfo = document.getElementById("chat-info");
+    const entry = document.createElement("div");
+    entry.textContent = text;
+    chatInfo.appendChild(entry);
+    chatInfo.scrollTop = chatInfo.scrollHeight;
 }
 const hexes = [];
 const hexMap = new Map();
@@ -72,22 +153,28 @@ let ctx;
 function hexToPixel(xCor, yCor, size = 40) {
     const vertSpacing = Math.sqrt(3) * size;
     const horizSpacing = 0.75 * (2 * size);
-    const x = xCor * horizSpacing + 25;
-    const y = yCor * vertSpacing + (xCor % 2) * (vertSpacing / 2) + 25;
+    const x = xCor * horizSpacing + (window.innerWidth / 3.8);
+    const y = yCor * vertSpacing + (xCor % 2) * (vertSpacing / 2) + 95;
     return { x, y };
 }
 function initCanvas() {
     canvas = document.getElementById("canvas");
     ctx = canvas.getContext("2d");
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    // canvas.width = 1200;
+    // canvas.height = 700; 
 }
 function render() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.save();
-    ctx.setTransform(camera.zoom, 0, 0, camera.zoom, -camera.x, -camera.y);
+    ctx.setTransform(camera.zoom, 0, 0, camera.zoom, -camera.x * camera.zoom, -camera.y * camera.zoom);
+    ctx.fillStyle = "rgb(171 215 235)";
+    ctx.fillRect(0, 0, worldWidth, worldHeight);
+    updatePortraits(turn_order);
+    updateBanner(turn_order);
     for (const hex of hexes) {
-        ctx.drawImage(hex.img, hex.x - hex.img.width / 2, hex.y - hex.img.height / 2);
+        const screenX = hex.x - hex.img.width / 2;
+        const screenY = hex.y - hex.img.height / 2;
+        ctx.drawImage(hex.img, screenX, screenY);
     }
     for (const char of turn_order) {
         renderChar(char);
@@ -97,9 +184,14 @@ function render() {
 function renderChar(character) {
     const path = new Path2D();
     path.arc(character.x, character.y, 10, 0, 2 * Math.PI);
-    ctx.fillStyle = "#ff0";
+    if (character.class == Mager)
+        ctx.fillStyle = "#0000FF";
+    if (character.class == Ranger)
+        ctx.fillStyle = "#00ff00";
+    if (character.class == Warrior)
+        ctx.fillStyle = "#FF0000";
     ctx.fill(path);
-    ctx.strokeStyle = "#000";
+    ctx.strokeStyle = "#000000";
     ctx.stroke(path);
     character.path = path;
 }
@@ -330,15 +422,23 @@ function setPathTo(character, targetHex) {
         moveChar(character);
     }
 }
-// Check neighbors for hexagons and characters.
+function isOccupied(hex, characters) {
+    return characters.some(c => c.xCor === hex.xCor && c.yCor === hex.yCor);
+}
+const filtered = hexes.filter((h) => !!h &&
+    h.movementCost !== Infinity &&
+    !isOccupied(h, turn_order));
+//get neighbors of a hex helper
 function getNeighbors(hex) {
     const even = hex.xCor % 2 === 0;
     const deltas = even
-        ? [[+1, 0], [0, -1], [-1, -1], [-1, 0], [-1, +1], [0, +1]]
+        ? [[+1, -1], [0, -1], [-1, -1], [-1, 0], [0, +1], [+1, 0]]
         : [[+1, 0], [0, -1], [-1, 0], [-1, +1], [0, +1], [+1, +1]];
     return deltas
         .map(([dx, dy]) => hexMap.get(`${hex.xCor + dx},${hex.yCor + dy}`))
-        .filter((h) => !!h && h.movementCost !== Infinity);
+        .filter((h) => !!h &&
+        h.movementCost !== Infinity &&
+        !isOccupied(h, [...team1, ...team2]));
 }
 function findPath(start, goal) {
     const openSet = [];
@@ -415,6 +515,16 @@ function checkActionPoints(character) {
     }
     return (character.actionPoints, character.bonusActionPoints);
 }
+function getNeighboringCharacters(hex, characters) {
+    const neighbors = getNeighbors(hex);
+    return characters.filter(char => neighbors.some(n => n.xCor === char.xCor && n.yCor === char.yCor));
+}
+// OI I WANT YOU TO ADD AN ATTACKING FUNCTION ON YOUR NEXT THING. 
+// It checks if the character has enough action / bonus action to do anything,
+// and the way you attack is you take the range of the weapon (e.g meele would be 1 hex away)
+// and then if the character you want to attack is in that range, you can attack them.
+// Create a new interface called weapon that has the following properties:
+// name, range, damage
 window.onload = () => __awaiter(this, void 0, void 0, function* () {
     initCanvas();
     genHex(10, 15, 40);
@@ -425,8 +535,8 @@ window.onload = () => __awaiter(this, void 0, void 0, function* () {
         const mouseY = (i.clientY - rect.top) / camera.zoom + camera.y;
         for (const hex of hexes) {
             if (ctx.isPointInPath(hex.path, mouseX, mouseY)) {
-                setPathTo(turn_order[currentTurnIndex], hex);
-                //console.log("clicked hex", hex.xCor, hex.yCor, hex, hex);
+                setPathTo(turn_order[0], hex);
+                // console.log("clicked hex", hex.xCor, hex.yCor, hex, hex);
                 return;
             }
         }
@@ -465,8 +575,10 @@ window.onload = () => __awaiter(this, void 0, void 0, function* () {
         const mouseX = (m.clientX - rect.left) / camera.zoom + camera.x;
         const mouseY = (m.clientY - rect.top) / camera.zoom + camera.y;
         camera.zoom *= zoomFactor;
-        // if (camera.zoom > 5) camera.zoom = 5;
-        // if (camera.zoom < 0.8) camera.zoom = 1;
+        if (camera.zoom > 5)
+            camera.zoom = 5;
+        if (camera.zoom < 0.5)
+            camera.zoom = 0.5;
         camera.x = mouseX - (m.clientX - rect.left) / camera.zoom;
         camera.y = mouseY - (m.clientY - rect.top) / camera.zoom;
         render();

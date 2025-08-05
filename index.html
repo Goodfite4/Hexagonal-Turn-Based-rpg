@@ -7,9 +7,39 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <canvas id="canvas"></canvas>
-    <div id="tooltip" style="position: absolute; background: white; border: 1px solid #333; padding: 4px; display: none; pointer-events: none;"></div>
-    <button id="endTurnBtn">End Turn</button>
-    <script src="index.js"></script>
+  <div id="Game">
+    <div id="turn-order-ui"></div>
+
+    <div id="full-window">
+      <canvas id="canvas" width="1600" height="900"></canvas>
+
+      <div id="sidebar">
+        <div id="chat-info" class="scrollable"></div>
+          <div id="chat-input">
+            <input type="text" id="chat-box" placeholder="Enter command..." />
+            <button onclick="sendMessage()">Send</button>
+        </div>
+      </div>
+
+    <div id="action-banner-ui">
+      <div id="ability-banner">
+        <img id="char-portrait" src="" />
+        
+        <img class="ap-icon" src="Images/UI/ActionPT.png" />
+        <img class="ap-icon" src="Images/UI/ActionPT.png" />
+
+        <img class="ability-icon" id="ability-1" src="" />
+        <img class="ability-icon" id="ability-2" src="" />
+        <img class="ability-icon" id="ability-3" src="" />
+        <img class="ability-icon" id="ability-4" src="" />
+
+        <img id="movement-speed-icon" src="Images/UI/MS.png" />
+      </div>
+    </div>
+
+    </div>
+  </div>
+
+  <script src="index.js"></script>
 </body>
 </html>
