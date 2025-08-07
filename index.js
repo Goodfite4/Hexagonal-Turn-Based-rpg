@@ -117,13 +117,18 @@ const team2 = [
 ];
 let turn_order = [...team1, ...team2].sort((a, b) => b.dex - a.dex);
 let isCharacterMoving = false;
+function filterTurnOrder(turn_order) {
+    // console.log(turn_order);
+    turn_order = turn_order.filter((Character) => Character.hp > 0);
+    return turn_order;
+}
 function checkTurnOrder(character) {
     character.movementSpeed = 5;
     isCharacterMoving = false;
     const put_turn_last = turn_order.shift();
     if (put_turn_last !== undefined)
         turn_order.push(put_turn_last);
-    console.log("turn_order:", turn_order);
+    // console.log("turn_order:", turn_order);
 }
 //Chatting Logic
 function sendMessage() {
@@ -171,10 +176,18 @@ function render() {
     ctx.fillRect(0, 0, worldWidth, worldHeight);
     updatePortraits(turn_order);
     updateBanner(turn_order);
+    const current_char = turn_order[0];
     for (const hex of hexes) {
+        const inRange = hexDistance(current_char, hex) == current_char.class.range;
         const screenX = hex.x - hex.img.width / 2;
         const screenY = hex.y - hex.img.height / 2;
         ctx.drawImage(hex.img, screenX, screenY);
+        if (inRange) {
+            ctx.save();
+            ctx.fillStyle = "rgba(255, 165, 0, 0.3)";
+            ctx.fill(hex.path);
+            ctx.restore;
+        }
     }
     for (const char of turn_order) {
         renderChar(char);
@@ -525,6 +538,25 @@ function getNeighboringCharacters(hex, characters) {
 // and then if the character you want to attack is in that range, you can attack them.
 // Create a new interface called weapon that has the following properties:
 // name, range, damage
+//calculate distance between hexes to see if they fit range or not
+function offsetToCube(hex) {
+    const x = hex.xCor;
+    const z = hex.yCor - (hex.xCor - (hex.xCor & 1)) / 2;
+    const y = -x - z;
+    return { x, y, z };
+}
+function hexDistance(a, b) {
+    const ac = offsetToCube(a);
+    const bc = offsetToCube(b);
+    return Math.max(Math.abs(ac.x - bc.x), Math.abs(ac.y - bc.y), Math.abs(ac.z - bc.z));
+}
+function getCharacterOnHex(hex, characters) {
+    return turn_order.find(c => c.xCor === hex.xCor && c.yCor === hex.yCor);
+}
+function performAttack(attacker, target) {
+    console.log(target.hp);
+    target.hp -= attacker.class.baseDmg;
+}
 window.onload = () => __awaiter(this, void 0, void 0, function* () {
     initCanvas();
     genHex(10, 15, 40);
@@ -535,11 +567,26 @@ window.onload = () => __awaiter(this, void 0, void 0, function* () {
         const mouseY = (i.clientY - rect.top) / camera.zoom + camera.y;
         for (const hex of hexes) {
             if (ctx.isPointInPath(hex.path, mouseX, mouseY)) {
-                setPathTo(turn_order[0], hex);
-                // console.log("clicked hex", hex.xCor, hex.yCor, hex, hex);
-                return;
+                console.log(hex.xCor, hex.yCor);
+                const attacker = turn_order[0];
+                const target = getCharacterOnHex(hex, [...team1, ...team2]);
+                if (target && target !== attacker) {
+                    const inRange = hexDistance(attacker, target) <= attacker.class.range;
+                    if (inRange) {
+                        // console.log("Target is in range for attack!");
+                        performAttack(attacker, target);
+                    }
+                    else {
+                        console.log("Target is too far away.");
+                    }
+                }
+                else {
+                    setPathTo(attacker, hex);
+                }
             }
         }
+        turn_order = filterTurnOrder(turn_order);
+        render();
     });
     let isDragging = false;
     let lastMouseX = 0;
