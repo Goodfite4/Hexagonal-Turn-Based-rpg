@@ -28,30 +28,336 @@ interface Classes {
     range: number;
     baseDmg: number;
     portrait: string;
+    abilities: Ability[];
+}
+
+const warriorName = "Warrior";
+const warriorBaseDmg = 20;
+const warriorRange = 1;
+
+const rangeName = "Range";
+const rangeBaseDmg = 15;
+const rangeRange = 5;
+
+const mageName = "Mage";
+const mageBaseDmg = 5;
+const mageRange = 1;
+
+let warriorAbilityOne: Ability;
+let warriorAbilityTwo: Ability;
+let warriorAbilityThree: Ability;
+let warriorAbilityFour: Ability;
+
+let rangeAbilityOne: Ability;
+let rangeAbilityTwo: Ability;
+let rangeAbilityThree: Ability;
+let rangeAbilityFour: Ability;
+
+let mageAbilityOne: Ability;
+let mageAbilityTwo: Ability;
+let mageAbilityThree: Ability;
+let mageAbilityFour: Ability;
+
+warriorAbilityOne = {
+    name: "Dazing Strike",
+    dmg: warriorBaseDmg,
+    manaCost: 2,
+    coolDown: 1,
+    APCost: 1,
+    AOE: 0,
+    description: "Strike At the head of your opponent to Daze them",
+    range: warriorRange,
+    targetType: "character",
+    abilityFunction: (attacker: Character, target: Character) => {
+        performAttack(attacker, target, warriorBaseDmg, dazed);
+    },
+    duration: 0,
+}
+
+warriorAbilityTwo = {
+    name: "Blade's Edge",
+    dmg: warriorBaseDmg * 1.5,
+    manaCost: 2,
+    APCost: 1,
+    coolDown: 2,
+    AOE: 0,
+    description: "Strike at an opponent with one extra range. Opponents at maximum distance take 50% extra damage",
+    range: warriorRange + 1,
+    targetType: "character",
+    abilityFunction: (attacker: Character, target: Character) => {
+        hexDistance(attacker, target) == 2 ? 
+            performAttack(attacker, target, warriorAbilityTwo.dmg):
+            performAttack(attacker, target, warriorBaseDmg);
+            },
+    duration: 0,
+}
+
+warriorAbilityThree = {
+    name: "Jump",
+    dmg: 0,
+    manaCost: 0,
+    APCost: 1,
+    coolDown: 1,
+    AOE: 0,
+    description: "Don't skip leg day!",
+    range: 4,
+    targetType: "hex",
+    abilityFunction: (attacker, targetHex?: Hex) => {
+        if (!targetHex) return;
+        attacker.xCor = targetHex.xCor;
+        attacker.yCor = targetHex.yCor;
+        attacker.x = targetHex.x;
+        attacker.y = targetHex.y;
+
+        const path = new Path2D();
+        path.arc(attacker.x, attacker.y, 10, 0, 2 * Math.PI);
+        attacker.path = path;
+        render();
+    },
+    duration: 0,
+}
+
+warriorAbilityFour = {
+    name: "Heavy Whirlwind",
+    dmg: warriorBaseDmg * 2,
+    manaCost: 4,
+    APCost: 2,
+    coolDown: 4,
+    AOE: 1,
+    description: "Swing for heavy damage all around",
+    range: warriorRange,
+    targetType: "none",
+    abilityFunction: (attacker) => {
+        const enemyTeam = (getTeamMembers(attacker, team1, team2) === team1) ? team2 : team1;
+        const targets = getCharactersInRadius(attacker, 1, enemyTeam);
+        targets.forEach(enemy => {
+            performAttack(attacker, enemy, warriorBaseDmg * 1.5);
+        })   
+        
+    },
+    duration: 0,
+}
+
+rangeAbilityOne = {
+    name: "Snaring Shot",
+    dmg: rangeBaseDmg,
+    manaCost: 2,
+    coolDown: 2,
+    APCost: 1,
+    AOE: 0,
+    description: "Strike At the head of your opponent to Daze them",
+    range: rangeRange,
+    targetType: "character",
+    abilityFunction: (attacker: Character, target: Character) => {
+        performAttack(attacker, target, rangeBaseDmg, snared);
+    },
+    duration: 1,
+}
+
+rangeAbilityTwo = {
+    name: "Ricochet",
+    dmg: rangeBaseDmg,
+    manaCost: 2,
+    coolDown: 2,
+    APCost: 1,
+    AOE: 0,
+    description: "Shoot at a target. If there are other enemies around the target, the arrow bounces towards them too.",
+    range: rangeRange,
+    targetType: "character",
+    abilityFunction: (attacker: Character, target: Character) => {
+        const enemyTeam = (getTeamMembers(attacker, team1, team2) === team1) ? team2 : team1;
+        const inrad = getCharactersInRadius(target, 1, enemyTeam) 
+        inrad.forEach(enemy => {
+            performAttack(attacker, enemy, rangeBaseDmg);
+        })  
+    },
+    duration: 1,
+}
+
+rangeAbilityThree = {
+    name: "Quick Evasion",
+    dmg: 0,
+    manaCost: 2,
+    coolDown: 1,
+    APCost: 1,
+    AOE: 0,
+    description: "Strike At the head of your opponent to Daze them",
+    range: 4,
+    targetType: "hex",
+    abilityFunction: (attacker, targetHex?: Hex) => {
+        if (!targetHex) return;
+        attacker.xCor = targetHex.xCor;
+        attacker.yCor = targetHex.yCor;
+        attacker.x = targetHex.x;
+        attacker.y = targetHex.y;
+
+        const path = new Path2D();
+        path.arc(attacker.x, attacker.y, 10, 0, 2 * Math.PI);
+        attacker.path = path;
+        render();
+    },
+    duration: 1,
+}
+
+rangeAbilityFour = {
+    name: "Big Iron",
+    dmg: rangeBaseDmg,
+    manaCost: 2,
+    coolDown: 4,
+    APCost: 0,
+    AOE: 0,
+    description: "You have a big iron on your hip. Use it to deal extra damage. This attack costs no AP",
+    range: rangeRange,
+    targetType: "character",
+    abilityFunction: (attacker: Character, target: Character) => {
+        performAttack(attacker, target, rangeBaseDmg);
+    },
+    duration: 1,
+}
+
+mageAbilityOne = {
+    name: "FireBall",
+    dmg: 20,
+    manaCost: 2,
+    coolDown: 1,
+    APCost: 0,
+    AOE: 1,
+    description: "You have a big iron on your hip. Use it to deal extra damage. This attack costs no AP",
+    range: 6,
+    targetType: "hex",
+    abilityFunction: (attacker: Character, targetHex?: Hex) => {
+        if (!targetHex) return;
+        const hitChars = getCharactersInRadius(targetHex, 1, [...team1, ...team2]);
+        for (const chars of hitChars){
+            performAttack(attacker, chars, 20, burning);
+        }
+    },
+    duration: 1,
+}
+mageAbilityTwo = {
+    name: "Teleport",
+    dmg: 0,
+    manaCost: 2,
+    coolDown: 4,
+    APCost: 1,
+    AOE: 0,
+    description: "You have a big iron on your hip. Use it to deal extra damage. This attack costs no AP",
+    range: rangeRange,
+    targetType: "character",
+    abilityFunction: (attacker: Character, target: Character) => {
+        performAttack(attacker, target, rangeBaseDmg);
+    },
+    duration: 1,
+}
+mageAbilityThree = {
+    name: "Enrage / Enfeeble",
+    dmg: 0,
+    manaCost: 2,
+    coolDown: 3,
+    APCost: 1,
+    AOE: 0,
+    description: "If used on an ally character, add 50% damage. If used on an opponent, remove 50% damage from their turn.",
+    range: rangeRange,
+    targetType: "character",
+    abilityFunction: (attacker: Character, target: Character) => {
+        const attackerTeam = getTeamMembers(attacker, team1, team2);
+        const targetTeam = getTeamMembers(target, team1, team2);
+
+        if (attackerTeam === targetTeam) {
+            performAttack(attacker, target, 0, Enraged);
+        } else {
+            performAttack(attacker, target, 0, Enfeebled);
+        }
+    },
+    duration: 1,
+}
+mageAbilityFour = {
+    name: "Arcane Catacalysm",
+    dmg: 5,
+    manaCost: 5,
+    coolDown: 6,
+    APCost: 2,
+    AOE: 5,
+    description: "deal 5 damage to enemies per Mana Point you have",
+    range: 5,
+    targetType: "none",
+    abilityFunction: (attacker: Character) => {
+        const enemyTeam = (getTeamMembers(attacker, team1, team2) === team1) ? team2 : team1;
+        const targets = getCharactersInRadius(attacker, 5, enemyTeam);
+        targets.forEach(enemy => { // replace this with code which takes in the amount of mana Mage character has and multiplying it by 5
+            performAttack(attacker, enemy, 25)
+        });
+    },
+    duration: 1,
 }
 
 const Warrior: Classes = {
-    name: "Warrior",
-    range: 1,
-    baseDmg: 20,
+    name: warriorName,
+    range: warriorRange,
+    baseDmg: warriorBaseDmg,
     portrait: "Images/Classes/Warrior/Warrior.png",
+    abilities: [warriorAbilityOne, warriorAbilityTwo, warriorAbilityThree, warriorAbilityFour],
 }
 
 const Ranger: Classes = {
-    name: "Range",
-    range: 5,
-    baseDmg: 15,
+    name: rangeName,
+    range: rangeRange,
+    baseDmg: rangeBaseDmg,
     portrait: "Images/Classes/Range/Range.png",
+    abilities: [rangeAbilityOne, rangeAbilityTwo, rangeAbilityThree, rangeAbilityFour],
 }
 
 const Mager: Classes = {
-    name: "Mage",
-    range: 1,
-    baseDmg: 5,
+    name: mageName,
+    range: mageRange,
+    baseDmg: mageBaseDmg,
     portrait: "Images/Classes/Mage/Mage.png",
+    abilities: [mageAbilityOne, mageAbilityTwo, mageAbilityThree, mageAbilityFour],
 }
 
+interface StatusEffects {
+    name: String;
+    effectDescription: String;
+    effect: number;
+    duration: number;
+    dmg: number;
+}
 
+const dazed: StatusEffects = {
+    name: "dazed",
+    effectDescription: "Character has 30% less damage",
+    effect: 0.7,
+    duration: 2,
+    dmg: 0,
+}
+const burning: StatusEffects = {
+    name: "burning",
+    effectDescription: "take 5 damage every time your turn starts",
+    effect: 0,
+    duration: 2,
+    dmg: 5,
+}
+const snared: StatusEffects = {
+    name: "snared",
+    effectDescription: "Snare a target for its next turn",
+    effect: 0,
+    duration: 1,
+    dmg: 0,
+}
+const Enraged = {
+    name: "Enraged",
+    effectDescription: "add 50% damage this turn.",
+    effect: 0.5,
+    duration: 1,
+    dmg: 0,
+ }
+ const Enfeebled = {
+    name: "Enfeebled",
+    effectDescription: "lose 50% damage this turn.",
+    effect: 0.5,
+    duration: 1,
+    dmg: 0,
+ }
 
 interface Character {
     x: number;
@@ -69,6 +375,7 @@ interface Character {
     actionPoints: number;
     bonusActionPoints: number;
     class: Classes;
+    activeStatuses: StatusEffects[];
 }
 
 const tester: Character = {
@@ -86,7 +393,25 @@ const tester: Character = {
     actionPoints: 1,
     bonusActionPoints: 1,
     class: Warrior,
+    activeStatuses: [],
 };
+
+type TargetType = "character" | "hex" | "none";
+
+interface Ability {
+    name: String;
+    dmg: number;
+    manaCost: number;
+    coolDown: number;
+    APCost: number;
+    AOE: number;
+    description: String;
+    range: number; 
+    targetType: TargetType;
+    abilityFunction: (caster: Character, target?: Character | Hex) => void;
+    duration: number;
+}
+
 
 function createCharacter(overrides: Partial<Character> = {}): Character {
     return {
@@ -104,6 +429,7 @@ function createCharacter(overrides: Partial<Character> = {}): Character {
         actionPoints: 1,
         bonusActionPoints: 1, 
         class: null,
+        activeStatuses: [],
         ...overrides
     };
 }
@@ -122,26 +448,32 @@ function updatePortraits (list: Character[]) {
     });
 }
 
+let activeAbility: Ability | null = null;
+
 function updateBanner(list: Character[]) {
-    const char = list[0];
-    const char_portrait = document.getElementById("char-portrait") as HTMLImageElement
+     const char = list[0];
+    const char_portrait = document.getElementById("char-portrait") as HTMLImageElement;
     char_portrait.src = char.class.portrait;
     char_portrait.onclick = () => {
-        addChatLine(`${char.class.name} has ${char.hp} hp`)
-    }
+        addChatLine(`${char.class.name} has ${char.hp} hp`);
+    };
+
     for (let i = 1; i <= 4; i++) {
         const abilityEl = document.getElementById(`ability-${i}`) as HTMLImageElement;
+        const ability = char.class.abilities[i - 1];
         abilityEl.src = `Images/Classes/${char.class.name}/${char.class.name + i}.png`;
+
         abilityEl.onclick = () => {
-            addChatLine(`${char.class.name}`);
+        activeAbility = ability;
+        addChatLine(`Selected ${ability.name}. Left-click to use. Right-click to cancel.`);
+        render();
         };
     }
-
     const msIcon = document.getElementById("movement-speed-icon") as HTMLImageElement;
     msIcon.onclick = () => {
         addChatLine(`${char.class.name} has ${char.movementSpeed} movement speed.`);
     };
-}
+ }
 
 function addChatLine(message: string) {
     const chatInfo = document.getElementById("chat-info");
@@ -177,11 +509,16 @@ function filterTurnOrder(turn_order: Character[]){
 
 
 function checkTurnOrder(character: Character) {
-    character.movementSpeed = 5;
+    character.activeStatuses.includes(snared)? character.movementSpeed = 0 : character.movementSpeed = 5;
     isCharacterMoving = false;
     const put_turn_last = turn_order.shift();
     if (put_turn_last !== undefined) turn_order.push(put_turn_last);
-        
+    for (const status of character.activeStatuses) {
+        character.hp -= status.dmg;
+        status.duration -= 1;          
+    }
+    character.activeStatuses = character.activeStatuses.filter((status) => status.duration >= 0) 
+    render();
     // console.log("turn_order:", turn_order);
 }
 
@@ -261,13 +598,16 @@ function render() {
     const current_char = turn_order[0];
 
     for (const hex of hexes) {
-        const inRange = hexDistance(current_char, hex) == current_char.class.range;
+        const rangeToUse = activeAbility ? activeAbility.range : current_char.class.range;
+        const inRange = hexDistance(current_char, hex) <= rangeToUse;
         const screenX = hex.x - hex.img.width / 2;
         const screenY = hex.y - hex.img.height / 2;
         ctx.drawImage(hex.img, screenX, screenY);
-        if (inRange) {
+        if (inRange && hex.terrain != "blocked") {
             ctx.save();
-            ctx.fillStyle = "rgba(255, 165, 0, 0.3)";
+            ctx.fillStyle = activeAbility 
+                ?"rgba(0, 255, 0, 0.3)"
+                :"rgba(255, 165, 0, 0.3)";
             ctx.fill(hex.path);
             ctx.restore;
         }
@@ -492,6 +832,15 @@ function makeTerrain(row, col) {
          return structureList[Math.floor(Math.random() * structureList.length)];
     } else return "normal";   
 } 
+function getTeamMembers(character: Character, team1: Character[], team2: Character[]): Character[] {
+    if (team1.includes(character)) {
+        return team1;
+    }
+    if (team2.includes(character)) {
+        return team2;
+    }
+    throw new Error("Please choose a valid character.");
+}
 
 //pathfinding
 
@@ -617,12 +966,10 @@ function findPath(start: Hex, goal: Hex): Hex[] {
     openSet.push(startNode);
 
     while (openSet.length > 0) {
-        // Get node with lowest f
         openSet.sort((a, b) => a.f - b.f);
         const current = openSet.shift()!;
 
         if (current.hex === goal) {
-            // Reconstruct path
             const path: Hex[] = [];
             let node: Node | undefined = current;
             while (node) {
@@ -705,14 +1052,20 @@ function hexDistance(a: Hex | Character, b: Hex | Character): number {
     );
 }
 
+function getCharactersInRadius(center: Character | Hex, radius: number, targets: Character[]): Character[] {
+    return targets.filter(char => {const dist = hexDistance(center, char);
+        return dist <= radius;
+    });
+}
+
 function getCharacterOnHex(hex: Hex, characters: Character[]): Character | undefined {
     return turn_order.find(c => c.xCor === hex.xCor && c.yCor === hex.yCor);
 }
 
-function performAttack(attacker: Character, target: Character) {
-    console.log(target.hp)
-    target.hp -= attacker.class.baseDmg
-    
+function performAttack(attacker: Character, target: Character, damage: number, status?: StatusEffects) {
+    attacker.activeStatuses.includes(dazed)? target.hp -= damage * 0.7 : target.hp -= damage;
+    target.activeStatuses.push(status);
+    logToChat(target.hp);
 }
 
 window.onload = async () => {
@@ -721,33 +1074,70 @@ window.onload = async () => {
 
     render();
 
-    canvas.addEventListener("click", (i) => {
+    canvas.addEventListener("click", (e) => {
         const rect = canvas.getBoundingClientRect();
-        const mouseX = (i.clientX - rect.left) / camera.zoom + camera.x;
-        const mouseY = (i.clientY - rect.top) / camera.zoom + camera.y;
+        const mouseX = (e.clientX - rect.left) / camera.zoom + camera.x;
+        const mouseY = (e.clientY - rect.top) / camera.zoom + camera.y;
+        const attacker = turn_order[0];
 
         for (const hex of hexes) {
-            if (ctx.isPointInPath(hex.path, mouseX, mouseY)) {
-                console.log(hex.xCor, hex.yCor)
-                const attacker = turn_order[0];
-                const target = getCharacterOnHex(hex, [...team1, ...team2]);
+            if (!ctx.isPointInPath(hex.path, mouseX, mouseY)) continue;
 
-                if (target && target !== attacker) {
-                    const inRange = hexDistance(attacker, target) <= attacker.class.range;
+            const targetCharacter = getCharacterOnHex(hex, [...team1, ...team2]);
 
-                    if (inRange) {
-                        // console.log("Target is in range for attack!");
-                        performAttack(attacker, target);
+            if (activeAbility) {
+                if (activeAbility.targetType === "character") {
+                    if (targetCharacter && targetCharacter !== attacker) {
+                        const inRange = hexDistance(attacker, targetCharacter) <= activeAbility.range;
+                        if (inRange) {
+                            activeAbility.abilityFunction(attacker, targetCharacter);
+                            activeAbility = null;
+                        } else {
+                            logToChat("Target is too far away.");
+                        }
                     } else {
-                        console.log("Target is too far away.");
+                        logToChat("You must click a valid character.");
                     }
-                } else {
-                    setPathTo(attacker, hex);
                 }
+                else if (activeAbility.targetType === "hex") {
+                    const inRange = hexDistance(attacker, hex) <= activeAbility.range;
+                    if (inRange) {
+                        activeAbility.abilityFunction(attacker, hex);
+                        activeAbility = null;
+                    } else {
+                        logToChat("Target hex is too far away.");
+                    }
+                }
+                else if (activeAbility.targetType === "none") {
+                    activeAbility.abilityFunction(attacker);
+                    activeAbility = null;
+                }
+                return;
+            }
+
+            if (targetCharacter && targetCharacter !== attacker) {
+                const inRange = hexDistance(attacker, targetCharacter) <= attacker.class.range;
+                if (inRange) {
+                    performAttack(attacker, targetCharacter, attacker.class.baseDmg);
+                } else {
+                    logToChat("Target is too far away.");
+                }
+            } else {
+                setPathTo(attacker, hex);
             }
         }
-        turn_order = filterTurnOrder(turn_order)
+
+        turn_order = filterTurnOrder(turn_order);
         render();
+    });
+
+    canvas.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    if (activeAbility) {
+        activeAbility = null;
+        render()
+        addChatLine(`Cancelled ability selection.`);
+    }
     });
 
     let isDragging = false;
